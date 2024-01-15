@@ -37,13 +37,17 @@ export async function createEvent({ userId, event, path }: CreateEventParams) {
     await connectToDB();
 
     const organizer = await User.findById(userId);
+    // With existing Clerk metadata
+    // const organizer = await User.findOne({ clerkId: userId });
+
     if (!organizer) throw new Error("Organizer not found");
 
     const newEvent = await Event.create({
       ...event,
       category: event.categoryId,
-      organizer: userId,
+      organizer: organizer._id,
     });
+
     revalidatePath(path);
 
     return JSON.parse(JSON.stringify(newEvent));
@@ -73,6 +77,7 @@ export async function updateEvent({ userId, event, path }: UpdateEventParams) {
     await connectToDB();
 
     const eventToUpdate = await Event.findById(event._id);
+
     if (!eventToUpdate || eventToUpdate.organizer.toHexString() !== userId) {
       throw new Error("Unauthorized or event not found");
     }
@@ -96,6 +101,7 @@ export async function deleteEvent({ eventId, path }: DeleteEventParams) {
     await connectToDB();
 
     const deletedEvent = await Event.findByIdAndDelete(eventId);
+
     if (deletedEvent) revalidatePath(path);
   } catch (error) {
     handleError(error);
